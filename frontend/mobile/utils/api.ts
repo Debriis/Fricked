@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://192.168.1.11:8080";
+const BASE_URL = "https://fricked.onrender.com";
 const VALIDATION_KEY = "f3a9c2d8e1b4f6a7c0d3e5f8a1b2c4d6";
 
 const getBearer = () => {
