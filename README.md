@@ -10,7 +10,7 @@
 
 ## Download
 
-👉 [Download for Android](#) *(APK — no Play Store needed)*
+👉 [Download for Android](https://expo.dev/accounts/debriis67/projects/mobile/builds/4a714f0e-56df-4cd1-b548-79988bbda1ae)
 
 > iOS support coming soon.
 
