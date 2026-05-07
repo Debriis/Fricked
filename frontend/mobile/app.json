@@ -10,7 +10,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/fRICKED_LOGO.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/fRICKED_LOGO.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -27,7 +27,7 @@
       "package": "com.debriis.fricked"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/fRICKED_LOGO.png"
     },
     "plugins": [
       "expo-secure-store",
