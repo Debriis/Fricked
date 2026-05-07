@@ -10,7 +10,7 @@
 
 ## Download
 
-👉 [Download for Android](https://expo.dev/accounts/debriis67/projects/mobile/builds/4a714f0e-56df-4cd1-b548-79988bbda1ae)
+👉 [Download for Android](https://expo.dev/accounts/debriis67/projects/mobile/builds/795b75dd-1a1c-4cf9-98ec-ffa79dbcf079)
 
 👉 [iOS Web app](https://fricked.vercel.app/)
 
