@@ -1,25 +1,31 @@
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { useRouter, usePathname } from "expo-router";
+import { useTheme } from "../utils/ThemeContext";
 
 const TABS = [
     { route: "/dashboard", label: "HOME", icon: "⌂" },
     { route: "/attendance", label: "ATTEND", icon: "◈" },
     { route: "/marks", label: "MARKS", icon: "◉" },
     { route: "/timetable", label: "SCHED", icon: "▦" },
-    { route: "/profile", label: "YOU", icon: "◎" },
+    { route: "/more", label: "MORE", icon: "⊞" },
 ];
 
 export default function TabBar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { theme } = useTheme();
+
+    // treat /profile, /settings as "more" active
+    const isMoreActive = ["/more", "/profile", "/settings"].includes(pathname);
 
     return (
-        <View style={styles.wrapper}>
-            {/* top edge line */}
-            <View style={styles.topLine} />
-            <View style={styles.container}>
+        <View style={[styles.wrapper, { backgroundColor: theme.bg }]}>
+            <View style={[styles.topLine, { backgroundColor: theme.border }]} />
+            <View style={[styles.container, { backgroundColor: theme.bg, paddingBottom: Platform.OS === "ios" ? 24 : 8 }]}>
                 {TABS.map((tab) => {
-                    const active = pathname === tab.route;
+                    const active = tab.route === "/more"
+                        ? isMoreActive
+                        : pathname === tab.route;
                     return (
                         <TouchableOpacity
                             key={tab.route}
@@ -27,11 +33,11 @@ export default function TabBar() {
                             onPress={() => router.push(tab.route as any)}
                             activeOpacity={0.7}
                         >
-                            {active && <View style={styles.activeBar} />}
-                            <Text style={[styles.icon, active && styles.iconActive]}>
+                            {active && <View style={[styles.activeBar, { backgroundColor: theme.accent }]} />}
+                            <Text style={[styles.icon, { color: active ? theme.accent : theme.borderStrong }]}>
                                 {tab.icon}
                             </Text>
-                            <Text style={[styles.label, active && styles.labelActive]}>
+                            <Text style={[styles.label, { color: active ? theme.textPrimary : theme.borderStrong }]}>
                                 {tab.label}
                             </Text>
                         </TouchableOpacity>
@@ -44,17 +50,13 @@ export default function TabBar() {
 
 const styles = StyleSheet.create({
     wrapper: {
-        backgroundColor: "#000000",
         borderTopWidth: 0,
     },
     topLine: {
         height: 1,
-        backgroundColor: "#111111",
     },
     container: {
         flexDirection: "row",
-        backgroundColor: "#000000",
-        paddingBottom: Platform.OS === "ios" ? 24 : 8,
         paddingTop: 8,
     },
     tab: {
@@ -71,22 +73,13 @@ const styles = StyleSheet.create({
         left: "20%",
         right: "20%",
         height: 2,
-        backgroundColor: "#ff6b2b",
     },
     icon: {
         fontSize: 16,
-        color: "#2a2a2a",
-    },
-    iconActive: {
-        color: "#ff6b2b",
     },
     label: {
         fontSize: 7,
         fontWeight: "900",
         letterSpacing: 1.5,
-        color: "#2a2a2a",
-    },
-    labelActive: {
-        color: "#ffffff",
     },
 });

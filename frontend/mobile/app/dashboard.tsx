@@ -8,8 +8,11 @@ import { getAttendance, getMarks, getTimetable } from "../utils/api";
 import { getToken } from "../utils/storage";
 import { useRouter } from "expo-router";
 import TabBar from "./tabbar";
+import { useTheme } from "../utils/ThemeContext";
 
 export default function DashboardPage() {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
@@ -52,14 +55,15 @@ export default function DashboardPage() {
             if (attRes.status === "fulfilled") {
                 const subjects = attRes.value.data?.attendance || [];
                 const totals = subjects.map((s: any) => {
-                    const pct = parseFloat(s.attendancePercentage || s.percentage || "0");
-                    return pct;
+                    const pct = parseFloat(s.attendancePercentage || "0");
+                    return isNaN(pct) ? 0 : pct;
                 });
                 const overall = totals.length > 0
                     ? totals.reduce((a: number, b: number) => a + b, 0) / totals.length
                     : 0;
                 const low = totals.filter((p: number) => p < 75).length;
                 setAttendanceSummary({ overall: Math.round(overall), low });
+                console.log("SET SUMMARY:", { overall: Math.round(overall), low });
             }
 
             // Marks summary
@@ -107,31 +111,30 @@ export default function DashboardPage() {
     const onRefresh = () => { setRefreshing(true); fetchAll(true); };
 
     const attColor = attendanceSummary.overall >= 75
-        ? "#ff6b2b"
+        ? theme.accent
         : attendanceSummary.overall >= 65
-            ? "#ff6b2b88"
-            : "#ff3333";
+            ? theme.accent + "88"
+            : theme.danger;
 
     if (loading)
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="light-content" backgroundColor="#000000" />
-                <ActivityIndicator size="large" color="#ff6b2b" />
+                <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
+                <ActivityIndicator size="large" color={theme.accent} />
                 <Text style={styles.loadingText}>LOADING</Text>
             </View>
         );
 
     return (
         <View style={styles.root}>
-            <StatusBar barStyle="light-content" backgroundColor="#000000" />
-            <View style={styles.topAccentBar} />
+            <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
 
             <ScrollView
                 style={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ff6b2b" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
                 }
             >
                 {/* Greeting header */}
@@ -146,7 +149,6 @@ export default function DashboardPage() {
 
                 {/* Stat cards row */}
                 <Animated.View style={[styles.statsRow, { opacity: fadeAnim }]}>
-                    {/* Attendance card */}
                     <TouchableOpacity
                         style={styles.statCard}
                         activeOpacity={0.8}
@@ -157,23 +159,17 @@ export default function DashboardPage() {
                             {attendanceSummary.overall}%
                         </Text>
                         <View style={styles.progressBg}>
-                            <View style={[
-                                styles.progressFill,
-                                {
-                                    width: `${Math.min(attendanceSummary.overall, 100)}%` as any,
-                                    backgroundColor: attColor,
-                                }
-                            ]} />
+                            <View style={[styles.progressFill, {
+                                width: `${Math.min(attendanceSummary.overall, 100)}%` as any,
+                                backgroundColor: attColor,
+                            }]} />
                         </View>
                         {attendanceSummary.low > 0 && (
-                            <Text style={styles.warningText}>
-                                ⚠ {attendanceSummary.low} LOW
-                            </Text>
+                            <Text style={styles.warningText}>⚠ {attendanceSummary.low} LOW</Text>
                         )}
                         <Text style={styles.cardArrow}>↗</Text>
                     </TouchableOpacity>
 
-                    {/* Marks card */}
                     <TouchableOpacity
                         style={styles.statCard}
                         activeOpacity={0.8}
@@ -181,22 +177,19 @@ export default function DashboardPage() {
                     >
                         <Text style={styles.statLabel}>AVG MARKS</Text>
                         <Text style={[styles.statValue, {
-                            color: marksSummary.avgPct >= 80 ? "#fff"
-                                : marksSummary.avgPct >= 60 ? "#ff6b2b"
-                                    : "#ff3333"
+                            color: marksSummary.avgPct >= 80 ? theme.textPrimary
+                                : marksSummary.avgPct >= 60 ? theme.accent
+                                    : theme.danger
                         }]}>
                             {marksSummary.avgPct}%
                         </Text>
                         <View style={styles.progressBg}>
-                            <View style={[
-                                styles.progressFill,
-                                {
-                                    width: `${Math.min(marksSummary.avgPct, 100)}%` as any,
-                                    backgroundColor: marksSummary.avgPct >= 80 ? "#ff6b2b"
-                                        : marksSummary.avgPct >= 60 ? "#ff6b2b66"
-                                            : "#ff3333",
-                                }
-                            ]} />
+                            <View style={[styles.progressFill, {
+                                width: `${Math.min(marksSummary.avgPct, 100)}%` as any,
+                                backgroundColor: marksSummary.avgPct >= 80 ? theme.accent
+                                    : marksSummary.avgPct >= 60 ? theme.accent + "66"
+                                        : theme.danger,
+                            }]} />
                         </View>
                         <Text style={styles.subStat}>{marksSummary.subjects} SUBJECTS</Text>
                         <Text style={styles.cardArrow}>↗</Text>
@@ -227,9 +220,7 @@ export default function DashboardPage() {
                                     <Text style={styles.classCode}>{p.courseCode}</Text>
                                     <Text style={styles.classTitle} numberOfLines={1}>{p.courseTitle}</Text>
                                 </View>
-                                {p.roomNo && (
-                                    <Text style={styles.classRoom}>{p.roomNo}</Text>
-                                )}
+                                {p.roomNo && <Text style={styles.classRoom}>{p.roomNo}</Text>}
                             </View>
                         ))
                     )}
@@ -279,74 +270,64 @@ function formatTime(t: string): string {
     return `${h}:${m}${ampm}`;
 }
 
-const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#000000" },
-    center: { flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", gap: 12 },
-    topAccentBar: { height: 2, backgroundColor: "#ff6b2b" },
-    scroll: { flex: 1, paddingHorizontal: 16 },
-    loadingText: { color: "#333", fontSize: 10, letterSpacing: 3, fontWeight: "900", marginTop: 12 },
+function getStyles(theme: ReturnType<typeof useTheme>['theme']) {
+    return StyleSheet.create({
+        root: { flex: 1, backgroundColor: theme.bg },
+        center: { flex: 1, backgroundColor: theme.bg, justifyContent: "center", alignItems: "center", gap: 12 },
+        scroll: { flex: 1, paddingHorizontal: 16 },
+        loadingText: { color: theme.textMuted, fontSize: 10, letterSpacing: 3, fontWeight: "900", marginTop: 12 },
 
-    header: { paddingTop: 20, paddingBottom: 20 },
-    pageTag: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-    tagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#ff6b2b", },
-    tagText: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 2.5, paddingTop: 20 },
-    pageTitle: { color: "#fff", fontSize: 60, fontWeight: "900", letterSpacing: -2, lineHeight: 72, marginTop: 20 },
-    dateText: { color: "#222", fontSize: 9, fontWeight: "900", letterSpacing: 2, marginTop: 4 },
+        header: { paddingTop: 20, paddingBottom: 20 },
+        pageTag: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+        tagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: theme.accent },
+        tagText: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 2.5, paddingTop: 20 },
+        pageTitle: { color: theme.textPrimary, fontSize: 60, fontWeight: "900", letterSpacing: -2, lineHeight: 72, marginTop: 20 },
+        dateText: { color: theme.textDead, fontSize: 9, fontWeight: "900", letterSpacing: 2, marginTop: 4 },
 
-    statsRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
-    statCard: {
-        flex: 1,
-        backgroundColor: "#080808",
-        borderWidth: 1, borderColor: "#1a1a1a",
-        padding: 14,
-        position: "relative",
-    },
-    statLabel: { color: "#333", fontSize: 7, fontWeight: "900", letterSpacing: 2, marginBottom: 8 },
-    statValue: { fontSize: 32, fontWeight: "900", letterSpacing: -1.5, marginBottom: 10 },
-    progressBg: { height: 2, backgroundColor: "#111", marginBottom: 8 },
-    progressFill: { height: 2 },
-    warningText: { color: "#ff3333", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-    subStat: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-    cardArrow: { position: "absolute", top: 10, right: 12, color: "#1a1a1a", fontSize: 14, fontWeight: "900" },
+        statsRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+        statCard: {
+            flex: 1, backgroundColor: theme.bgCard,
+            borderWidth: 1, borderColor: theme.border,
+            padding: 14, position: "relative",
+        },
+        statLabel: { color: theme.textMuted, fontSize: 7, fontWeight: "900", letterSpacing: 2, marginBottom: 8 },
+        statValue: { fontSize: 32, fontWeight: "900", letterSpacing: -1.5, marginBottom: 10 },
+        progressBg: { height: 2, backgroundColor: theme.textDead, marginBottom: 8 },
+        progressFill: { height: 2 },
+        warningText: { color: theme.danger, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+        subStat: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+        cardArrow: { position: "absolute", top: 10, right: 12, color: theme.textDead, fontSize: 14, fontWeight: "900" },
 
-    sectionHeader: {
-        flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-        marginBottom: 10,
-    },
-    sectionTitle: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 2.5 },
-    sectionLink: { color: "#ff6b2b", fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
+        sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+        sectionTitle: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 2.5 },
+        sectionLink: { color: theme.accent, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
 
-    noClass: {
-        backgroundColor: "#080808", borderWidth: 1, borderColor: "#1a1a1a",
-        paddingVertical: 20, alignItems: "center", marginBottom: 20,
-    },
-    noClassText: { color: "#222", fontSize: 10, fontWeight: "900", letterSpacing: 2 },
+        noClass: {
+            backgroundColor: theme.bgCard, borderWidth: 1, borderColor: theme.border,
+            paddingVertical: 20, alignItems: "center", marginBottom: 20,
+        },
+        noClassText: { color: theme.textDead, fontSize: 10, fontWeight: "900", letterSpacing: 2 },
 
-    classRow: {
-        flexDirection: "row", alignItems: "center",
-        backgroundColor: "#080808", borderWidth: 1, borderColor: "#1a1a1a",
-        paddingHorizontal: 12, paddingVertical: 10,
-        marginBottom: 6, gap: 10,
-    },
-    classTimeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#ff6b2b" },
-    classTimeBlock: { width: 52 },
-    classTime: { color: "#ff6b2b", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-    classInfo: { flex: 1 },
-    classCode: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
-    classTitle: { color: "#fff", fontSize: 12, fontWeight: "700", marginTop: 1 },
-    classRoom: { color: "#333", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
+        classRow: {
+            flexDirection: "row", alignItems: "center",
+            backgroundColor: theme.bgCard, borderWidth: 1, borderColor: theme.border,
+            paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6, gap: 10,
+        },
+        classTimeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: theme.accent },
+        classTimeBlock: { width: 52 },
+        classTime: { color: theme.accent, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+        classInfo: { flex: 1 },
+        classCode: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
+        classTitle: { color: theme.textPrimary, fontSize: 12, fontWeight: "700", marginTop: 1 },
+        classRoom: { color: theme.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 1 },
 
-    quickGrid: {
-        flexDirection: "row", flexWrap: "wrap", gap: 10,
-        marginTop: 20, marginBottom: 10,
-    },
-    quickCard: {
-        width: "47%",
-        backgroundColor: "#080808",
-        borderWidth: 1, borderColor: "#1a1a1a",
-        paddingVertical: 20, paddingHorizontal: 16,
-        alignItems: "flex-start",
-    },
-    quickIcon: { color: "#ff6b2b", fontSize: 20, marginBottom: 10 },
-    quickLabel: { color: "#fff", fontSize: 9, fontWeight: "900", letterSpacing: 2 },
-});
+        quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 20, marginBottom: 10 },
+        quickCard: {
+            width: "47%", backgroundColor: theme.bgCard,
+            borderWidth: 1, borderColor: theme.border,
+            paddingVertical: 20, paddingHorizontal: 16, alignItems: "flex-start",
+        },
+        quickIcon: { color: theme.accent, fontSize: 20, marginBottom: 10 },
+        quickLabel: { color: theme.textPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 2 },
+    });
+}

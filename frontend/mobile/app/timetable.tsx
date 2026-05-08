@@ -8,6 +8,7 @@ import { getTimetable } from "../utils/api";
 import { getToken } from "../utils/storage";
 import { useRouter } from "expo-router";
 import TabBar from "./tabbar";
+import { useTheme } from "../utils/ThemeContext";
 
 type Period = {
     courseCode: string;
@@ -27,6 +28,8 @@ const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const FULL_DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function TimetablePage() {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
     const [schedule, setSchedule] = useState<DaySchedule[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +38,7 @@ export default function TimetablePage() {
         const d = new Date().getDay(); // 0=Sun
         return d === 0 ? 0 : d - 1;
     });
+
     const router = useRouter();
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -73,8 +77,8 @@ export default function TimetablePage() {
     if (loading)
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="light-content" backgroundColor="#000000" />
-                <ActivityIndicator size="large" color="#ff6b2b" />
+                <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
+                <ActivityIndicator size="large" color={theme.accent} />
                 <Text style={styles.loadingText}>LOADING SCHEDULE</Text>
             </View>
         );
@@ -82,7 +86,7 @@ export default function TimetablePage() {
     if (error)
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="light-content" backgroundColor="#000000" />
+                <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
                 <Text style={styles.errorCode}>ERR_LOAD</Text>
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity style={styles.retryBtn} onPress={() => fetchData()}>
@@ -93,15 +97,15 @@ export default function TimetablePage() {
 
     return (
         <View style={styles.root}>
-            <StatusBar barStyle="light-content" backgroundColor="#000000" />
-            <View style={styles.topAccentBar} />
+            <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
+
 
             <ScrollView
                 style={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ff6b2b" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
                 }
             >
                 {/* Header */}
@@ -213,93 +217,95 @@ function formatTime(t: string): string {
     return `${h}:${m} ${ampm}`;
 }
 
-const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#000000" },
-    center: { flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", gap: 12 },
-    topAccentBar: { height: 2, backgroundColor: "#ff6b2b" },
-    scroll: { flex: 1, paddingHorizontal: 16 },
+function getStyles(theme: ReturnType<typeof useTheme>['theme']) {
+    return StyleSheet.create({
+        root: { flex: 1, backgroundColor: theme.bg },
+        center: { flex: 1, backgroundColor: theme.bg, justifyContent: "center", alignItems: "center", gap: 12 },
 
-    loadingText: { color: "#333", fontSize: 10, letterSpacing: 3, fontWeight: "900", marginTop: 12 },
-    errorCode: { color: "#ff3333", fontSize: 32, fontWeight: "900", letterSpacing: -1 },
-    errorText: { color: "#444", fontSize: 12, letterSpacing: 0.5 },
-    retryBtn: { marginTop: 16, borderWidth: 1, borderColor: "#ff6b2b", paddingHorizontal: 20, paddingVertical: 10 },
-    retryText: { color: "#ff6b2b", fontSize: 10, fontWeight: "900", letterSpacing: 2 },
+        scroll: { flex: 1, paddingHorizontal: 16 },
 
-    header: {
-        flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end",
-        paddingTop: 20, paddingBottom: 16,
-    },
-    pageTag: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-    tagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#ff6b2b" },
-    tagText: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 2.5, paddingTop: 15 },
-    pageTitle: { color: "#fff", fontSize: 60, fontWeight: "900", letterSpacing: -2, lineHeight: 72, marginTop: 10 },
-    headerRight: { alignItems: "flex-end", borderLeftWidth: 3, borderLeftColor: "#ff6b2b", paddingLeft: 10 },
-    periodCountBig: { color: "#ff6b2b", fontSize: 42, fontWeight: "900", letterSpacing: -2 },
-    periodCountLabel: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 2 },
+        loadingText: { color: theme.textMuted, fontSize: 10, letterSpacing: 3, fontWeight: "900", marginTop: 12 },
+        errorCode: { color: theme.danger, fontSize: 32, fontWeight: "900", letterSpacing: -1 },
+        errorText: { color: theme.textMuted, fontSize: 12, letterSpacing: 0.5 },
+        retryBtn: { marginTop: 16, borderWidth: 1, borderColor: theme.accent, paddingHorizontal: 20, paddingVertical: 10 },
+        retryText: { color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 },
 
-    daySelector: {
-        flexDirection: "row",
-        marginBottom: 4,
-        borderWidth: 1,
-        borderColor: "#1a1a1a",
-        overflow: "hidden",
-    },
-    dayTab: {
-        flex: 1, paddingVertical: 10, alignItems: "center",
-        backgroundColor: "#080808", position: "relative",
-    },
-    dayTabActive: { backgroundColor: "#ff6b2b" },
-    dayLabel: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-    dayLabelActive: { color: "#000" },
-    todayDot: {
-        position: "absolute", bottom: 4,
-        width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#ff6b2b",
-    },
+        header: {
+            flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end",
+            paddingTop: 20, paddingBottom: 16,
+        },
+        pageTag: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+        tagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: theme.accent },
+        tagText: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 2.5, paddingTop: 15 },
+        pageTitle: { color: theme.textPrimary, fontSize: 60, fontWeight: "900", letterSpacing: -2, lineHeight: 72, marginTop: 10 },
+        headerRight: { alignItems: "flex-end", borderLeftWidth: 3, borderLeftColor: theme.accent, paddingLeft: 10 },
+        periodCountBig: { color: theme.accent, fontSize: 42, fontWeight: "900", letterSpacing: -2 },
+        periodCountLabel: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
 
-    fullDayName: {
-        color: "#111", fontSize: 11, fontWeight: "900", letterSpacing: 3,
-        marginBottom: 16, marginTop: 8,
-    },
+        daySelector: {
+            flexDirection: "row",
+            marginBottom: 4,
+            borderWidth: 1,
+            borderColor: theme.border,
+            overflow: "hidden",
+        },
+        dayTab: {
+            flex: 1, paddingVertical: 10, alignItems: "center",
+            backgroundColor: theme.bgCard, position: "relative",
+        },
+        dayTabActive: { backgroundColor: theme.accent },
+        dayLabel: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+        dayLabelActive: { color: theme.bg },
+        todayDot: {
+            position: "absolute", bottom: 4,
+            width: 3, height: 3, borderRadius: 1.5, backgroundColor: theme.accent,
+        },
 
-    emptyState: { alignItems: "center", paddingVertical: 60 },
-    emptyCode: { color: "#1a1a1a", fontSize: 64, fontWeight: "900" },
-    emptyText: { color: "#333", fontSize: 11, letterSpacing: 3, marginTop: 4 },
+        fullDayName: {
+            color: theme.textDead, fontSize: 11, fontWeight: "900", letterSpacing: 3,
+            marginBottom: 16, marginTop: 8,
+        },
 
-    periodRow: { flexDirection: "row", marginBottom: 10, alignItems: "flex-start" },
+        emptyState: { alignItems: "center", paddingVertical: 60 },
+        emptyCode: { color: theme.textDead, fontSize: 64, fontWeight: "900" },
+        emptyText: { color: theme.textMuted, fontSize: 11, letterSpacing: 3, marginTop: 4 },
 
-    timeline: { width: 20, alignItems: "center", paddingTop: 6 },
-    timelineDot: {
-        width: 6, height: 6, borderRadius: 3,
-        backgroundColor: "#ff6b2b", marginBottom: 0,
-    },
-    timelineLine: {
-        width: 1, flex: 1, backgroundColor: "#1a1a1a",
-        marginTop: 4, minHeight: 40,
-    },
+        periodRow: { flexDirection: "row", marginBottom: 10, alignItems: "flex-start" },
 
-    timeCol: { width: 56, paddingTop: 2, paddingRight: 8 },
-    timeStart: { color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: -0.3 },
-    timeEnd: { color: "#333", fontSize: 9, fontWeight: "700", marginTop: 2 },
+        timeline: { width: 20, alignItems: "center", paddingTop: 6 },
+        timelineDot: {
+            width: 6, height: 6, borderRadius: 3,
+            backgroundColor: theme.accent, marginBottom: 0,
+        },
+        timelineLine: {
+            width: 1, flex: 1, backgroundColor: theme.border,
+            marginTop: 4, minHeight: 40,
+        },
 
-    periodCard: {
-        flex: 1,
-        backgroundColor: "#080808",
-        borderWidth: 1,
-        borderColor: "#1a1a1a",
-        padding: 12,
-        position: "relative",
-    },
-    periodCode: { color: "#ff6b2b", fontSize: 8, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
-    periodTitle: { color: "#fff", fontSize: 13, fontWeight: "700", lineHeight: 18, letterSpacing: -0.3, marginBottom: 8 },
-    periodMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-    metaChip: {
-        borderWidth: 1, borderColor: "#1e1e1e",
-        paddingHorizontal: 8, paddingVertical: 3,
-        backgroundColor: "#0d0d0d",
-    },
-    metaText: { color: "#444", fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
-    periodIndex: {
-        position: "absolute", top: 8, right: 10,
-        color: "#111", fontSize: 10, fontWeight: "900", letterSpacing: 1,
-    },
-});
+        timeCol: { width: 56, paddingTop: 2, paddingRight: 8 },
+        timeStart: { color: theme.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: -0.3 },
+        timeEnd: { color: theme.textMuted, fontSize: 9, fontWeight: "700", marginTop: 2 },
+
+        periodCard: {
+            flex: 1,
+            backgroundColor: theme.bgCard,
+            borderWidth: 1,
+            borderColor: theme.border,
+            padding: 12,
+            position: "relative",
+        },
+        periodCode: { color: theme.accent, fontSize: 8, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
+        periodTitle: { color: theme.textPrimary, fontSize: 13, fontWeight: "700", lineHeight: 18, letterSpacing: -0.3, marginBottom: 8 },
+        periodMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+        metaChip: {
+            borderWidth: 1, borderColor: theme.border,
+            paddingHorizontal: 8, paddingVertical: 3,
+            backgroundColor: theme.bgStrip,
+        },
+        metaText: { color: theme.textMuted, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+        periodIndex: {
+            position: "absolute", top: 8, right: 10,
+            color: theme.textDead, fontSize: 10, fontWeight: "900", letterSpacing: 1,
+        },
+    });
+}

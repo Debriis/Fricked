@@ -8,6 +8,7 @@ import { getAttendance } from "../utils/api";
 import { getToken, clearToken } from "../utils/storage";
 import { useRouter } from "expo-router";
 import TabBar from "./tabbar";
+import { useTheme } from "../utils/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
@@ -21,6 +22,8 @@ type Subject = {
 };
 
 export default function AttendancePage() {
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
     const [attendance, setAttendance] = useState<Subject[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -58,9 +61,9 @@ export default function AttendancePage() {
 
     const getColor = (pct: string) => {
         const n = parseFloat(pct);
-        if (n >= 75) return "#ffffff";
-        if (n >= 60) return "#ff6b2b";
-        return "#ff3333";
+        if (n >= 75) return theme.textPrimary;
+        if (n >= 60) return theme.accent;
+        return theme.danger;
     };
 
     const overallAvg = attendance.length > 0
@@ -84,8 +87,8 @@ export default function AttendancePage() {
     if (loading)
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="light-content" backgroundColor="#000000" />
-                <ActivityIndicator size="large" color="#ff6b2b" />
+                <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
+                <ActivityIndicator size="large" color={theme.accent} />
                 <Text style={styles.loadingText}>FETCHING ATTENDANCE</Text>
             </View>
         );
@@ -93,7 +96,7 @@ export default function AttendancePage() {
     if (error)
         return (
             <View style={styles.center}>
-                <StatusBar barStyle="light-content" backgroundColor="#000000" />
+                <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
                 <Text style={styles.errorCode}>ERR_LOAD</Text>
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity style={styles.retryBtn} onPress={() => fetchData()}>
@@ -104,15 +107,15 @@ export default function AttendancePage() {
 
     return (
         <View style={styles.root}>
-            <StatusBar barStyle="light-content" backgroundColor="#000000" />
-            <View style={styles.topAccentBar} />
+            <StatusBar barStyle={theme.statusBar} backgroundColor={theme.bg} />
+
 
             <ScrollView
                 style={styles.scroll}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ff6b2b" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />
                 }
             >
                 {/* Header */}
@@ -137,7 +140,7 @@ export default function AttendancePage() {
                         <Text style={styles.summaryLabel}>SUBJECTS</Text>
                     </View>
                     <View style={[styles.summaryCard, criticalCount > 0 && styles.summaryCardCritical]}>
-                        <Text style={[styles.summaryNum, criticalCount > 0 && { color: "#ff3333" }]}>
+                        <Text style={[styles.summaryNum, criticalCount > 0 && { color: theme.danger }]}>
                             {criticalCount}
                         </Text>
                         <Text style={styles.summaryLabel}>CRITICAL</Text>
@@ -154,7 +157,7 @@ export default function AttendancePage() {
                         <Animated.View
                             style={[styles.overallBarFill, {
                                 width: `${Math.min(overallAvg, 100)}%` as any,
-                                backgroundColor: overallAvg >= 75 ? "#ff6b2b" : overallAvg >= 60 ? "#ff6b2b88" : "#ff3333"
+                                backgroundColor: overallAvg >= 75 ? theme.accent : overallAvg >= 60 ? theme.accent + "88" : theme.danger
                             }]}
                         />
                     </View>
@@ -167,7 +170,7 @@ export default function AttendancePage() {
                     <TextInput
                         style={styles.searchInput}
                         placeholder="SEARCH SUBJECTS..."
-                        placeholderTextColor="#2a2a2a"
+                        placeholderTextColor={theme.borderStrong}
                         value={search}
                         onChangeText={setSearch}
                         autoCapitalize="characters"
@@ -254,8 +257,8 @@ export default function AttendancePage() {
                                                 styles.seg,
                                                 {
                                                     backgroundColor: (i + 1) * 5 <= pct
-                                                        ? (pct >= 75 ? "#ff6b2b" : pct >= 60 ? "#ff6b2b66" : "#ff333366")
-                                                        : "#111111",
+                                                        ? (pct >= 75 ? theme.accent : pct >= 60 ? theme.accent + "66" : "#ff333366")
+                                                        : theme.textDead,
                                                 },
                                             ]}
                                         />
@@ -286,145 +289,147 @@ export default function AttendancePage() {
     );
 }
 
-const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#000000" },
-    center: { flex: 1, backgroundColor: "#000000", justifyContent: "center", alignItems: "center", gap: 12 },
-    topAccentBar: { height: 2, backgroundColor: "#ff6b2b" },
-    scroll: { flex: 1, paddingHorizontal: 16 },
+function getStyles(theme: ReturnType<typeof useTheme>['theme']) {
+    return StyleSheet.create({
+        root: { flex: 1, backgroundColor: theme.bg },
+        center: { flex: 1, backgroundColor: theme.bg, justifyContent: "center", alignItems: "center", gap: 12 },
 
-    loadingText: { color: "#333", fontSize: 10, letterSpacing: 3, fontWeight: "900", marginTop: 12 },
-    errorCode: { color: "#ff3333", fontSize: 32, fontWeight: "900", letterSpacing: -1 },
-    errorText: { color: "#444", fontSize: 12, letterSpacing: 0.5 },
-    retryBtn: { marginTop: 16, borderWidth: 1, borderColor: "#ff6b2b", paddingHorizontal: 20, paddingVertical: 10 },
-    retryText: { color: "#ff6b2b", fontSize: 10, fontWeight: "900", letterSpacing: 2 },
+        scroll: { flex: 1, paddingHorizontal: 16 },
 
-    header: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-        paddingTop: 20,
-        paddingBottom: 20,
-    },
-    pageTag: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-    tagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: "#ff6b2b" },
-    tagText: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 2.5, paddingTop: 15 },
-    pageTitle: { color: "#fff", fontSize: 60, fontWeight: "900", letterSpacing: -2, lineHeight: 72, marginTop: 10 },
-    overallBadge: {
-        flexDirection: "row",
-        alignItems: "flex-end",
-        borderLeftWidth: 3,
-        borderLeftColor: "#ff6b2b",
-        paddingLeft: 10,
-    },
-    overallNum: { color: "#ff6b2b", fontSize: 42, fontWeight: "900", letterSpacing: -2 },
-    overallUnit: { color: "#ff6b2b", fontSize: 16, fontWeight: "700", marginBottom: 6, marginLeft: 2 },
+        loadingText: { color: theme.textMuted, fontSize: 10, letterSpacing: 3, fontWeight: "900", marginTop: 12 },
+        errorCode: { color: theme.danger, fontSize: 32, fontWeight: "900", letterSpacing: -1 },
+        errorText: { color: theme.textMuted, fontSize: 12, letterSpacing: 0.5 },
+        retryBtn: { marginTop: 16, borderWidth: 1, borderColor: theme.accent, paddingHorizontal: 20, paddingVertical: 10 },
+        retryText: { color: theme.accent, fontSize: 10, fontWeight: "900", letterSpacing: 2 },
 
-    summaryRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
-    summaryCard: {
-        flex: 1,
-        backgroundColor: "#080808",
-        borderWidth: 1,
-        borderColor: "#1a1a1a",
-        padding: 12,
-        alignItems: "center",
-    },
-    summaryCardCritical: { borderColor: "#ff333333", backgroundColor: "#0a0505" },
-    summaryNum: { color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: -1 },
-    summaryLabel: { color: "#333", fontSize: 7, fontWeight: "900", letterSpacing: 2, marginTop: 2 },
+        header: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            paddingTop: 20,
+            paddingBottom: 20,
+        },
+        pageTag: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+        tagDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: theme.accent },
+        tagText: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 2.5, paddingTop: 15 },
+        pageTitle: { color: theme.textPrimary, fontSize: 60, fontWeight: "900", letterSpacing: -2, lineHeight: 72, marginTop: 10 },
+        overallBadge: {
+            flexDirection: "row",
+            alignItems: "flex-end",
+            borderLeftWidth: 3,
+            borderLeftColor: theme.accent,
+            paddingLeft: 10,
+        },
+        overallNum: { color: theme.accent, fontSize: 42, fontWeight: "900", letterSpacing: -2 },
+        overallUnit: { color: theme.accent, fontSize: 16, fontWeight: "700", marginBottom: 6, marginLeft: 2 },
 
-    overallBarSection: { marginBottom: 16 },
-    overallBarBg: { height: 3, backgroundColor: "#111", marginBottom: 6 },
-    overallBarFill: { height: 3 },
-    overallBarLabel: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 2 },
+        summaryRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
+        summaryCard: {
+            flex: 1,
+            backgroundColor: theme.bgCard,
+            borderWidth: 1,
+            borderColor: theme.border,
+            padding: 12,
+            alignItems: "center",
+        },
+        summaryCardCritical: { borderColor: "#ff333333", backgroundColor: theme.dangerBg },
+        summaryNum: { color: theme.textPrimary, fontSize: 24, fontWeight: "900", letterSpacing: -1 },
+        summaryLabel: { color: theme.textMuted, fontSize: 7, fontWeight: "900", letterSpacing: 2, marginTop: 2 },
 
-    searchBox: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#080808",
-        borderWidth: 1,
-        borderColor: "#1a1a1a",
-        paddingHorizontal: 14,
-        marginBottom: 12,
-        gap: 10,
-    },
-    searchIcon: { color: "#333", fontSize: 16 },
-    searchInput: {
-        flex: 1,
-        color: "#fff",
-        fontSize: 12,
-        paddingVertical: 14,
-        fontWeight: "700",
-        letterSpacing: 1,
-    },
+        overallBarSection: { marginBottom: 16 },
+        overallBarBg: { height: 3, backgroundColor: theme.textDead, marginBottom: 6 },
+        overallBarFill: { height: 3 },
+        overallBarLabel: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
 
-    filterRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
-    filterChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: "#1a1a1a",
-        backgroundColor: "#080808",
-    },
-    filterChipActive: { borderColor: "#ff6b2b", backgroundColor: "#1a0e08" },
-    filterLabel: { color: "#333", fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
-    filterLabelActive: { color: "#ff6b2b" },
+        searchBox: {
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: theme.bgCard,
+            borderWidth: 1,
+            borderColor: theme.border,
+            paddingHorizontal: 14,
+            marginBottom: 12,
+            gap: 10,
+        },
+        searchIcon: { color: theme.textMuted, fontSize: 16 },
+        searchInput: {
+            flex: 1,
+            color: theme.textPrimary,
+            fontSize: 12,
+            paddingVertical: 14,
+            fontWeight: "700",
+            letterSpacing: 1,
+        },
 
-    sectionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-    sectionLabel: { color: "#333", fontSize: 8, fontWeight: "900", letterSpacing: 3 },
-    sectionCount: { color: "#222", fontSize: 8, fontWeight: "700", letterSpacing: 1 },
+        filterRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+        filterChip: {
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderWidth: 1,
+            borderColor: theme.border,
+            backgroundColor: theme.bgCard,
+        },
+        filterChipActive: { borderColor: theme.accent, backgroundColor: theme.accentBg },
+        filterLabel: { color: theme.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
+        filterLabelActive: { color: theme.accent },
 
-    emptyState: { alignItems: "center", paddingVertical: 60 },
-    emptyCode: { color: "#1a1a1a", fontSize: 64, fontWeight: "900" },
-    emptyText: { color: "#333", fontSize: 11, letterSpacing: 3, marginTop: 4 },
+        sectionRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+        sectionLabel: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 3 },
+        sectionCount: { color: theme.textDead, fontSize: 8, fontWeight: "700", letterSpacing: 1 },
 
-    card: {
-        backgroundColor: "#080808",
-        borderWidth: 1,
-        borderColor: "#1a1a1a",
-        padding: 16,
-        marginBottom: 10,
-        position: "relative",
-    },
-    cardCritical: {
-        borderColor: "#ff333322",
-        backgroundColor: "#0a0505",
-        borderLeftWidth: 3,
-        borderLeftColor: "#ff3333",
-    },
-    cardIndex: {
-        position: "absolute", top: 10, right: 12,
-        color: "#1a1a1a", fontSize: 10, fontWeight: "900", letterSpacing: 1,
-    },
-    cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 },
-    cardLeft: { flex: 1, marginRight: 12 },
-    cardCode: { color: "#ff6b2b", fontSize: 9, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
-    cardTitle: { color: "#fff", fontSize: 14, fontWeight: "700", lineHeight: 19, marginBottom: 4, letterSpacing: -0.3 },
-    cardFaculty: { color: "#333", fontSize: 10, letterSpacing: 0.3 },
-    pctBlock: {
-        width: 56, height: 56,
-        borderWidth: 1,
-        justifyContent: "center",
-        backgroundColor: "#0d0d0d",
-        flexDirection: "row",
-        alignItems: "flex-end",
-        paddingBottom: 6,
-    },
-    pctBig: { fontSize: 22, fontWeight: "900", letterSpacing: -1, lineHeight: 26 },
-    pctUnit: { fontSize: 10, fontWeight: "700", marginBottom: 1, marginLeft: 1 },
+        emptyState: { alignItems: "center", paddingVertical: 60 },
+        emptyCode: { color: theme.textDead, fontSize: 64, fontWeight: "900" },
+        emptyText: { color: theme.textMuted, fontSize: 11, letterSpacing: 3, marginTop: 4 },
 
-    segBar: { flexDirection: "row", gap: 2, marginBottom: 12 },
-    seg: { flex: 1, height: 3, borderRadius: 1 },
+        card: {
+            backgroundColor: theme.bgCard,
+            borderWidth: 1,
+            borderColor: theme.border,
+            padding: 16,
+            marginBottom: 10,
+            position: "relative",
+        },
+        cardCritical: {
+            borderColor: theme.danger + "22",
+            backgroundColor: theme.dangerBg,
+            borderLeftWidth: 3,
+            borderLeftColor: theme.danger,
+        },
+        cardIndex: {
+            position: "absolute", top: 10, right: 12,
+            color: theme.textDead, fontSize: 10, fontWeight: "900", letterSpacing: 1,
+        },
+        cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 },
+        cardLeft: { flex: 1, marginRight: 12 },
+        cardCode: { color: theme.accent, fontSize: 9, fontWeight: "900", letterSpacing: 2, marginBottom: 4 },
+        cardTitle: { color: theme.textPrimary, fontSize: 14, fontWeight: "700", lineHeight: 19, marginBottom: 4, letterSpacing: -0.3 },
+        cardFaculty: { color: theme.textMuted, fontSize: 10, letterSpacing: 0.3 },
+        pctBlock: {
+            width: 56, height: 56,
+            borderWidth: 1,
+            justifyContent: "center",
+            backgroundColor: theme.bgStrip,
+            flexDirection: "row",
+            alignItems: "flex-end",
+            paddingBottom: 6,
+        },
+        pctBig: { fontSize: 22, fontWeight: "900", letterSpacing: -1, lineHeight: 26 },
+        pctUnit: { fontSize: 10, fontWeight: "700", marginBottom: 1, marginLeft: 1 },
 
-    cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    cardStat: { color: "#444", fontSize: 9, letterSpacing: 1, fontWeight: "700" },
-    actionChip: {
-        backgroundColor: "#0f1a0a",
-        borderWidth: 1,
-        borderColor: "#2a4a1a",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-    },
-    actionChipCritical: { backgroundColor: "#1a0505", borderColor: "#4a1a1a" },
-    actionText: { color: "#4a9a2a", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-    actionTextCritical: { color: "#ff5555" },
-});
+        segBar: { flexDirection: "row", gap: 2, marginBottom: 12 },
+        seg: { flex: 1, height: 3, borderRadius: 1 },
+
+        cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+        cardStat: { color: theme.textMuted, fontSize: 9, letterSpacing: 1, fontWeight: "700" },
+        actionChip: {
+            backgroundColor: theme.accentBg,
+            borderWidth: 1,
+            borderColor: theme.borderStrong,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+        },
+        actionChipCritical: { backgroundColor: theme.dangerBg, borderColor: theme.dangerBg },
+        actionText: { color: theme.goodColor, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+        actionTextCritical: { color: theme.danger },
+    });
+}

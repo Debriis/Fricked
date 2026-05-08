@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "FRICKED",
+    "slug": "fricked",
     "version": "1.0.0",
-    "scheme": "mobile",
+    "scheme": "fricked",
     "main": "expo-router/entry",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
