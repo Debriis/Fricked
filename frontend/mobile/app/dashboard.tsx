@@ -10,6 +10,53 @@ import { useRouter } from "expo-router";
 import TabBar from "./tabbar";
 import { useTheme } from "../utils/ThemeContext";
 
+const PERIOD_TIME_BY_POSITION: string[] = [
+    "08:00–08:50",
+    "08:50–09:40",
+    "09:45–10:35",
+    "10:40–11:30",
+    "11:35–12:25",
+    "12:30–01:20",
+    "01:25–02:15",
+    "02:20–03:10",
+    "03:10–04:00",
+    "04:00–04:50",
+    "04:50–05:30",
+    "05:30–06:10",
+];
+
+// Real 24h start/end (in minutes) for each position, matching PERIOD_TIME_BY_POSITION order
+const PERIOD_RANGES_MIN: [number, number][] = [
+    [8 * 60, 8 * 60 + 50],        // 08:00–08:50
+    [8 * 60 + 50, 9 * 60 + 40],   // 08:50–09:40
+    [9 * 60 + 45, 10 * 60 + 35],  // 09:45–10:35
+    [10 * 60 + 40, 11 * 60 + 30], // 10:40–11:30
+    [11 * 60 + 35, 12 * 60 + 25], // 11:35–12:25
+    [12 * 60 + 30, 13 * 60 + 20], // 12:30–01:20
+    [13 * 60 + 25, 14 * 60 + 15], // 01:25–02:15
+    [14 * 60 + 20, 15 * 60 + 10], // 02:20–03:10
+    [15 * 60 + 10, 16 * 60],      // 03:10–04:00
+    [16 * 60, 16 * 60 + 50],      // 04:00–04:50
+    [16 * 60 + 50, 17 * 60 + 30], // 04:50–05:30
+    [17 * 60 + 30, 18 * 60 + 10], // 05:30–06:10
+];
+
+function isMorningPeriod(timeStr: string): boolean {
+    const startHour = parseInt(timeStr.split(/[–-]/)[0], 10);
+    if (isNaN(startHour)) return true;
+    if (startHour === 12) return false;
+    if (startHour < 8) return false;
+    return startHour >= 8 && startHour < 12;
+}
+
+function isPeriodActiveNow(periodIndex: number): boolean {
+    const range = PERIOD_RANGES_MIN[periodIndex];
+    if (!range) return false;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return nowMin >= range[0] && nowMin < range[1];
+}
+
 export default function DashboardPage() {
     const { theme } = useTheme();
     const styles = getStyles(theme);
@@ -32,9 +79,9 @@ export default function DashboardPage() {
         return "GOOD EVENING";
     };
 
-    const getTodayKey = () => {
-        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        return days[new Date().getDay()];
+    const getTodayBackendDay = () => {
+        const d = new Date().getDay();
+        return d === 0 ? 1 : d;
     };
 
     const fetchAll = async (isRefresh = false) => {
@@ -51,7 +98,6 @@ export default function DashboardPage() {
                 getTimetable(token),
             ]);
 
-            // Attendance summary
             if (attRes.status === "fulfilled") {
                 const subjects = attRes.value.data?.attendance || [];
                 const totals = subjects.map((s: any) => {
@@ -63,10 +109,8 @@ export default function DashboardPage() {
                     : 0;
                 const low = totals.filter((p: number) => p < 75).length;
                 setAttendanceSummary({ overall: Math.round(overall), low });
-                console.log("SET SUMMARY:", { overall: Math.round(overall), low });
             }
 
-            // Marks summary
             if (marksRes.status === "fulfilled") {
                 const subjects = marksRes.value.data?.marks || [];
                 const pcts = subjects.map((s: any) => {
@@ -84,14 +128,21 @@ export default function DashboardPage() {
                 setMarksSummary({ subjects: subjects.length, avgPct: Math.round(avgPct) });
             }
 
-            // Today's timetable
+            // Today's timetable — shows ALL periods for the day, no slicing.
             if (ttRes.status === "fulfilled") {
-                const raw = ttRes.value.data?.timetable || ttRes.value.data?.schedule || ttRes.value.data || [];
-                const todayKey = getTodayKey();
-                const todaySchedule = raw.find(
-                    (s: any) => s.day?.toLowerCase().startsWith(todayKey.toLowerCase().slice(0, 3))
-                );
-                setTodayPeriods(todaySchedule?.periods?.slice(0, 4) || []);
+                const raw = ttRes.value.data?.schedule ?? ttRes.value.data ?? [];
+                const todayBackendDay = getTodayBackendDay();
+                const todaySchedule = Array.isArray(raw)
+                    ? raw.find((s: any) => s?.day === todayBackendDay)
+                    : undefined;
+
+                const periods = (todaySchedule?.table ?? [])
+                    .map((slot: any, idx: number) =>
+                        slot ? { ...slot, time: PERIOD_TIME_BY_POSITION[idx] ?? "--", periodIndex: idx } : null
+                    )
+                    .filter((p: any) => p !== null);
+
+                setTodayPeriods(periods);
             }
 
             setError("");
@@ -124,6 +175,8 @@ export default function DashboardPage() {
                 <Text style={styles.loadingText}>LOADING</Text>
             </View>
         );
+
+    const hasLivePeriod = todayPeriods.some((p) => isPeriodActiveNow(p.periodIndex));
 
     return (
         <View style={styles.root}>
@@ -210,19 +263,43 @@ export default function DashboardPage() {
                             <Text style={styles.noClassText}>NO CLASSES SCHEDULED</Text>
                         </View>
                     ) : (
-                        todayPeriods.map((p, idx) => (
-                            <View key={idx} style={styles.classRow}>
-                                <View style={styles.classTimeDot} />
-                                <View style={styles.classTimeBlock}>
-                                    <Text style={styles.classTime}>{formatTime(p.startTime)}</Text>
+                        todayPeriods.map((p, idx) => {
+                            const isMorning = isMorningPeriod(p.time);
+                            const cardBg = isMorning ? theme.cardSecondary : theme.cardPrimary;
+                            const cardText = isMorning
+                                ? theme.textOnSecondary
+                                : (theme.textOnPrimary ?? theme.textPrimary);
+                            const isLive = isPeriodActiveNow(p.periodIndex);
+                            const faded = hasLivePeriod && !isLive;
+
+                            return (
+                                <View
+                                    key={idx}
+                                    style={[
+                                        styles.classCard,
+                                        { backgroundColor: cardBg, opacity: faded ? 0.35 : 1 },
+                                        isLive && styles.classCardLive,
+                                    ]}
+                                >
+                                    <View style={styles.classCardTopRow}>
+                                        <Text style={[styles.classCardTime, { color: cardText }]}>
+                                            {p.time}
+                                        </Text>
+                                        {p.roomNo && (
+                                            <Text style={[styles.classCardRoom, { color: cardText }]}>
+                                                {p.roomNo}
+                                            </Text>
+                                        )}
+                                    </View>
+                                    <Text
+                                        style={[styles.classCardTitle, { color: cardText }]}
+                                        numberOfLines={2}
+                                    >
+                                        {p.name}
+                                    </Text>
                                 </View>
-                                <View style={styles.classInfo}>
-                                    <Text style={styles.classCode}>{p.courseCode}</Text>
-                                    <Text style={styles.classTitle} numberOfLines={1}>{p.courseTitle}</Text>
-                                </View>
-                                {p.roomNo && <Text style={styles.classRoom}>{p.roomNo}</Text>}
-                            </View>
-                        ))
+                            );
+                        })
                     )}
                 </Animated.View>
 
@@ -257,17 +334,6 @@ function formatDate() {
     const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
     const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
     return `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-}
-
-function formatTime(t: string): string {
-    if (!t) return "--";
-    const parts = t.split(":");
-    if (parts.length < 2) return t;
-    let h = parseInt(parts[0]);
-    const m = parts[1];
-    const ampm = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
-    return `${h}:${m}${ampm}`;
 }
 
 function getStyles(theme: ReturnType<typeof useTheme>['theme']) {
@@ -308,18 +374,37 @@ function getStyles(theme: ReturnType<typeof useTheme>['theme']) {
         },
         noClassText: { color: theme.textDead, fontSize: 10, fontWeight: "900", letterSpacing: 2 },
 
-        classRow: {
-            flexDirection: "row", alignItems: "center",
-            backgroundColor: theme.bgCard, borderWidth: 1, borderColor: theme.border,
-            paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6, gap: 10,
+        // --- Class card, shrunk down + live-highlight support ---
+        classCard: {
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            marginBottom: 8,
         },
-        classTimeDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: theme.accent },
-        classTimeBlock: { width: 52 },
-        classTime: { color: theme.accent, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-        classInfo: { flex: 1 },
-        classCode: { color: theme.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
-        classTitle: { color: theme.textPrimary, fontSize: 12, fontWeight: "700", marginTop: 1 },
-        classRoom: { color: theme.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 1 },
+        classCardLive: {
+            borderWidth: 1.5,
+            borderColor: theme.accent,
+        },
+        classCardTopRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+        },
+        classCardTime: {
+            fontSize: 11,
+            fontWeight: "500",
+        },
+        classCardRoom: {
+            fontSize: 11,
+            fontWeight: "900",
+        },
+        classCardTitle: {
+            fontSize: 15,
+            fontWeight: "900",
+            letterSpacing: -0.3,
+            lineHeight: 18,
+        },
 
         quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 20, marginBottom: 10 },
         quickCard: {

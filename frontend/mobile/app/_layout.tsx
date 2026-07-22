@@ -40,12 +40,12 @@ export default function RootLayout() {
 
     return (
         <ThemeProvider>
-            <StatusBar barStyle="light-content" backgroundColor="#000000" />
+            <StatusBar barStyle="light-content" backgroundColor="#1A1A1A" />
             <Stack screenOptions={{ headerShown: false, animation: "fade" }} />
             {checking && (
                 <View style={{
                     position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-                    backgroundColor: "#000000",
+                    backgroundColor: "#1A1A1A",
                     justifyContent: "center", alignItems: "center", gap: 16,
                 }}>
                     <ActivityIndicator size="large" color="#ff6b2b" />

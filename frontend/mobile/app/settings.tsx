@@ -20,6 +20,7 @@ const THEME_DESCRIPTIONS: Record<ThemeKey, string> = {
     BATMAN: "Crimson & black. Fear is a tool.",
     ICE: "Clean white & blue. Pure clarity.",
     PURPLE: "Black & purple. Modern & smooth.",
+    VINTAGE: "Retro editorial. Charcoal, record-store red, navy & cream.",
 };
 
 export default function SettingsPage() {
@@ -89,16 +90,25 @@ export default function SettingsPage() {
 
                     {/* Theme cards */}
                     <View style={styles.grid}>
-                        {ALL_THEME_KEYS.map((key) => {
+                        {ALL_THEME_KEYS.map((key, idx) => {
                             const t = THEMES[key];
                             const isActive = key === themeKey;
+
+                            // Alternate card surfaces where a theme defines two distinct
+                            // colors (e.g. VINTAGE: navy → cream → navy → cream).
+                            // Themes with cardPrimary === cardSecondary render unchanged.
+                            const onSecondary = idx % 2 === 1 && t.cardSecondary !== t.cardPrimary;
+                            const cardBg = onSecondary ? t.cardSecondary : t.cardPrimary;
+                            const nameColor = isActive ? t.accent : (onSecondary ? t.textOnSecondary : t.textPrimary);
+                            const descColor = onSecondary ? t.textOnSecondary : t.textMuted;
+
                             return (
                                 <TouchableOpacity
                                     key={key}
                                     style={[
                                         styles.themeCard,
                                         {
-                                            backgroundColor: t.bgCard,
+                                            backgroundColor: cardBg,
                                             borderColor: isActive ? t.accent : t.border,
                                             borderWidth: isActive ? 2 : 1,
                                         },
@@ -106,7 +116,8 @@ export default function SettingsPage() {
                                     onPress={() => handleThemeSelect(key)}
                                     activeOpacity={0.8}
                                 >
-                                    {/* Mini preview */}
+                                    {/* Mini preview — always shows the theme's real app background,
+                                        independent of which card surface this tile happens to sit on */}
                                     <View style={[styles.preview, { backgroundColor: t.bg }]}>
                                         <View style={[styles.previewAccent, { backgroundColor: t.accent }]} />
                                         <View style={styles.previewLines}>
@@ -120,7 +131,7 @@ export default function SettingsPage() {
                                     {/* Info */}
                                     <View style={styles.cardInfo}>
                                         <View style={styles.cardTop}>
-                                            <Text style={[styles.cardName, { color: isActive ? t.accent : t.textPrimary }]}>
+                                            <Text style={[styles.cardName, { color: nameColor }]}>
                                                 {key}
                                             </Text>
                                             {isActive && (
@@ -129,7 +140,7 @@ export default function SettingsPage() {
                                                 </View>
                                             )}
                                         </View>
-                                        <Text style={[styles.cardDesc, { color: t.textMuted }]}>
+                                        <Text style={[styles.cardDesc, { color: descColor, opacity: onSecondary ? 0.75 : 1 }]}>
                                             {THEME_DESCRIPTIONS[key]}
                                         </Text>
                                     </View>
